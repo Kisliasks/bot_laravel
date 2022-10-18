@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
-class Bot extends Model
+class Workstatus extends Model
 {
-    protected $table = 'bot';
+    protected $table = 'workstatus';
 
     protected $guarded = false;
     public $timestamps = null;
+
+   
 }

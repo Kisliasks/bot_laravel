@@ -2,18 +2,21 @@
 
 namespace App\Helpers;
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 
 class Telegram {
 
+    public $data;
     protected $http;
-    protected $bot = '5133760433:AAEfcDUm_OAzHa3ipLJQSC-561HQe3UXx_4';
+    protected $bot = '5680287506:AAHL0zd4_ZzpfO7Frn8gnHem4kdOQWgBzi8';
     const url = 'https://api.telegram.org/bot';
 
     public function __construct(Http $http)
     {
         $this->http = $http;
+        
        
     }
 
@@ -31,7 +34,7 @@ class Telegram {
 
         return    $this->http::post(self::url.$this->bot.'/editMessageText',[
                'chat_id' => $chat_id,
-               'text' =>$message,
+               'text' => $message,
                'parse_mode' => 'html',
                'message_id' => $message_id
        
@@ -71,15 +74,10 @@ class Telegram {
         ]);
        }
 
-       public function getWebhookData() {
-      return $update = json_decode(file_get_contents('php://input'));
-      
-
-       }
+    
 
 
 }
 
-// 583801982
-// (string)view('report', $data)
+
 ?>

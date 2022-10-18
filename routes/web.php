@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\WebhookController;
+use App\Http\Controllers\FullUserDataController;
 use App\Http\Controllers\DataController;
 use App\Modelsl\Order;
 use Illuminate\Http\Request;
@@ -20,17 +21,29 @@ use Illuminate\Support\Facades\Route;
 
 
 
+$appPath = 'App\Http\Controllers';
 
-Route::group(['namespace' => 'App\Http\Controllers'], function () {
 
-    Route::post('/webhook', function() {
+Route::post('/webhook', $appPath.'\WebhookController');
 
-        return response()->json(true, 200);
-        
-       
-    });
+// Route::get('/data', $appPath.'\DataController@date');
+Route::get('/work', $appPath.'\StartWorkDayController@buttons');
+// Route::get('/stat', $appPath.'\StartWorkDayController@statisticsWorkUsers');
+// Route::get('/unset', $appPath.'\StartWorkDayController@unsetWorkStatus');
+
+Route::get('/', function (\App\Helpers\Telegram $telegram){
+
+   $mes = $telegram->sendMessage('-1001813201867', 'text');
+
+    dd($mes);
+
+
+
 });
 
-$appPath = 'App\Http\Controllers';
-Route::get('/d', $appPath.'\DataController@getInfo');
-// Route::post('/webhook', $appPath.'\WebhookController@index');
+
+
+
+
+
+//https://api.telegram.org/bot5680287506:AAHL0zd4_ZzpfO7Frn8gnHem4kdOQWgBzi8/setWebhook?url=https://edc7-94-29-16-107.eu.ngrok.io/webhook
