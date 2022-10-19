@@ -2,7 +2,8 @@
 
 namespace App\Console;
 
-
+use App\Helpers\Bothelper;
+use App\Http\Controllers\StartWorkDayController;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 use App\Http\Controllers\BirthdayController;
@@ -23,12 +24,31 @@ class Kernel extends ConsoleKernel
         $schedule->call(
        new BirthdayController
 
-        )->dailyAt('10:00');
+        )->timezone('Europe/Moscow')->dailyAt('10:00');
+
+        $schedule->call(function () {
+            $work_day = new StartWorkDayController;
+            $work_day->startWorkTimeOut();
+                // время ответа работника истекло
+        })->timezone('Europe/Moscow')->weekdays()->dailyAt('10:00');
+
+        $schedule->call(function () {
+            $work_day = new StartWorkDayController;
+            $work_day->unsetWorkStatus();
+                // обнуляем work status в конце дня
+        })->timezone('Europe/Moscow')->weekdays()->dailyAt('22:00');
 
         $schedule->call(
-          new WebhookController
+              new StartWorkDayController
+            // вывод статистики
      
-             )->everyMinute();
+        )->timezone('Europe/Moscow')->weekdays()->dailyAt('10:00');
+
+        $schedule->call(function () {
+            $work_day = new StartWorkDayController;
+            $work_day->buttons();
+     // предложение поработать
+        })->timezone('Europe/Moscow')->weekdays()->dailyAt('09:55');
         
     }
 

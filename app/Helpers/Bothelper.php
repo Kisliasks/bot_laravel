@@ -5,6 +5,7 @@ namespace App\Helpers;
 use App\Models\Users;
 use App\Models\Workstatus;
 use DateTime;
+use DefStudio\Telegraph\Models\TelegraphChat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -186,7 +187,11 @@ public function editResult($date_of_birth, $username_tg, $fullname, $office_numb
             'office_number' => $office_number,
             'is_admin' => 1]
             );
-          
+            TelegraphChat::updateOrcreate(
+              ['chat_id' => $full_data['from']['id']],
+              ['name' => $username_tg]
+
+            );
 
             return true;
     }

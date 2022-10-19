@@ -6,9 +6,8 @@ namespace App\Http\Controllers;
 use App\Helpers\Telegram;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use  App\Http\Controllers\DataController;
 use App\Models\Users;
-
+use DefStudio\Telegraph\Models\TelegraphChat;
 use Illuminate\Support\Facades\Http;
 
 
@@ -37,9 +36,10 @@ class BirthdayController extends Controller
       $other_users = Users::select('username', 'telegram_id')->whereMonth('date_of_birth', '!=', $date_month)->whereDay('date_of_birth', '!=', $date_day)->get();
       foreach($other_users as $other_user) {
         $tg_id = $other_user->telegram_id;
-        echo $tg_id;
+        
         $message = 'У пользователя '.$result_user.' '.$result_fullname.' '.$result_date.' '.$result_office_number.' скоро день рождения! Давай поздравим его.';
-        $telegram->sendMessage($tg_id,$message);
+        $chat = TelegraphChat::where('chat_id', $tg_id);
+        $chat->message($message)->send();
       }
      }
    }

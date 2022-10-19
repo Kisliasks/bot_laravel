@@ -26,24 +26,17 @@ $appPath = 'App\Http\Controllers';
 
 Route::post('/webhook', $appPath.'\WebhookController');
 
-// Route::get('/data', $appPath.'\DataController@date');
+Route::get('/data', $appPath.'\DataController@sendMessage');
 Route::get('/work', $appPath.'\StartWorkDayController@buttons');
-// Route::get('/stat', $appPath.'\StartWorkDayController@statisticsWorkUsers');
-// Route::get('/unset', $appPath.'\StartWorkDayController@unsetWorkStatus');
-
-Route::get('/', function (\App\Helpers\Telegram $telegram){
-
-   $mes = $telegram->sendMessage('-1001813201867', 'text');
-
-    dd($mes);
-
-
-
-});
+Route::get('/stat', $appPath.'\StartWorkDayController@statisticsWorkUsers');
+Route::get('/timeout', $appPath.'\StartWorkDayController@startWorkTimeOut');
+Route::get('/unset', $appPath.'\StartWorkDayController@unsetWorkStatus');
 
 
 
 
 
 
-//https://api.telegram.org/bot5680287506:AAHL0zd4_ZzpfO7Frn8gnHem4kdOQWgBzi8/setWebhook?url=https://edc7-94-29-16-107.eu.ngrok.io/webhook
+
+
+//https://api.telegram.org/bot5680287506:AAHL0zd4_ZzpfO7Frn8gnHem4kdOQWgBzi8/setWebhook?url=https://8ea7-94-29-16-107.eu.ngrok.io/webhook

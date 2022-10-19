@@ -4,19 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Helpers\Bothelper;
 use App\Helpers\Telegram;
-
+use DefStudio\Telegraph\Models\TelegraphChat;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use App\Models\Users;
-use App\Models\Workstatus;
-use DateTime;
+
 
 
 class WebhookController extends Controller
 {
    
-   private $message_id;
+  
 
 
 
@@ -38,34 +37,26 @@ class WebhookController extends Controller
          $data = $full_data_buttons['data'];
          $username = '@'.$full_data_buttons['from']['username'];
 
-         date_default_timezone_set('Europe/Moscow');
-         $time = date('H:i');
-               if($time = '14:12') {        
-         
-           $data_bad_resp = 'блаблабла';
-           
-           Log::debug($data_bad_resp);
-      }
-         
-                         
+      
+                           
         switch($full_data_buttons) {
                         
-              case $data == 'Да' :
+              case $data == 'action:Да' :
                
                   $message = 'Вы сделали свой выбор. Хорошего дня!';
                   $buttons = $bothelper->unsetButtonWorkDay();
                   $telegram->editButtons($test_group_id, $message, $buttons, $message_id);
-                  $bothelper->insertWorkStatus($data, $username);
+                  $bothelper->insertWorkStatus('Да', $username);
                 
                 unset($full_data_buttons);
 
               break;
 
-              case !empty($data_bad_resp) || $data == 'Нет' :
+              case !empty($data_bad_resp) || $data == 'action:Нет' :
                 $message = 'Вы сделали свой выбор. Хорошего дня!';
                 $buttons = $bothelper->unsetButtonWorkDay();
                 $telegram->editButtons($test_group_id, $message, $buttons, $message_id);
-                $bothelper->insertWorkStatus($data, $username);
+                $bothelper->insertWorkStatus('Нет', $username);
 
                 unset($full_data_buttons);
                 break;
@@ -87,9 +78,15 @@ class WebhookController extends Controller
               ['telegram_id' => $new_member['new_chat_member']['id']], 
               ['username' => "@".$new_member['new_chat_member']['username']]
            );
+           TelegraphChat::updateOrcreate(
+            ['chat_id' => $new_member['new_chat_member']['id']],
+            ['name' => "@".$new_member['new_chat_member']['username']]
+           );
           
            $message = "В группу вступил пользователь " .'@'.$new_member['new_chat_member']['username'];
-           $telegram->sendMessage($test_group_id, $message);
+           $chat = TelegraphChat::find(1);
+           $chat->message($message)->send();
+           
             unset($new_member);
             Log::debug($message);
             break;
@@ -98,13 +95,15 @@ class WebhookController extends Controller
             $group_user_name = '@'.$left_member['left_chat_member']['username'];
             
             $user = Users::where('username', $group_user_name);
+            $chat = TelegraphChat::where('name', $group_user_name);
             
-            if(isset($user)) {
+            if(isset($user) && isset($chat)) {
               $user->delete();
-              
+              $chat->delete();
 
           $message = 'Пользователь '. $group_user_name. " вышел из группы";
-          $telegram->sendMessage($test_group_id, $message);
+          $chat = TelegraphChat::find(1);
+          $chat->message($message)->send();
           unset($left_member);
           Log::debug($message);
         }
@@ -126,7 +125,8 @@ class WebhookController extends Controller
           case ($type === 'bot_command' && str_contains($text,'/info')) :
             
             $info_bot = $bothelper->info_bot();
-            $telegram->sendMessage($test_group_id, $info_bot);
+            $chat = TelegraphChat::find(1);
+            $chat->message($info_bot)->send();
             Log::debug('Получение всей информации о работе бота');
             break;
 
@@ -136,13 +136,15 @@ class WebhookController extends Controller
 
             if(empty($usr)) {
               $message = $bothelper->notUsersAllComand();
-              $telegram->sendMessage($test_group_id, $message);
+              $chat = TelegraphChat::find(1);
+              $chat->message($message)->send();
               unset($full_data);
               Log::debug('В группе пока нет пользователей');
              }
                 if(!empty($usr)) {
                   $message = '<b>Пользователи:</b> '.PHP_EOL. $usr;
-                $telegram->sendMessage($test_group_id, $message);
+                  $chat = TelegraphChat::find(1);
+                  $chat->message($message)->send();
                 unset($full_data);
                 Log::debug('Произошел вывод всех пользователей из базы');
                 }
@@ -156,7 +158,8 @@ class WebhookController extends Controller
 // проверка на количество элементов в массиве
               if(count($textArr) < 5 || count($textArr) > 5 || $textArr[1] == '' || $textArr[2] == ''|| $textArr[3] == ''|| $textArr[4] == '') {
                 $message = $bothelper->bagMessageFormat();
-                $telegram->sendMessage($test_group_id, $message);
+                $chat = TelegraphChat::find(1);
+                $chat->message($message)->send();
                 unset($full_data);
               } else {              
                 $fullname =  $textArr[2];
@@ -166,12 +169,14 @@ class WebhookController extends Controller
   // `проверка на соответствие элементов массива              
                 if(!preg_match('/(\d+)/s', $date_of_birth) || !str_contains($date_of_birth,'.')) {
                   $message = $bothelper->bagMessageFormat();
-                  $telegram->sendMessage($test_group_id, $message);
+                  $chat = TelegraphChat::find(1);
+                  $chat->message($message)->send();
                   unset($full_data);
 // проверка на буквы в номере офиса
                 } elseif(!is_numeric($office_number)) {
                   $message = $bothelper->bagMessageOfficeNumberFormat();
-                  $telegram->sendMessage($test_group_id, $message);
+                  $chat = TelegraphChat::find(1);
+                  $chat->message($message)->send();
                   unset($full_data);
                 } else {
               
@@ -179,12 +184,14 @@ class WebhookController extends Controller
                         $correct_date = explode("-", str_replace(".", "-", $date_of_birth));
                         if(!is_numeric($correct_date[0]) || !is_numeric($correct_date[1]) || !is_numeric($correct_date[2]) || $correct_date[2] < 1000 || strlen(trim($correct_date[0])) !== 2 || strlen(trim($correct_date[1])) !== 2) {                          
                           $message = $bothelper->bagMessageDateFormat();
-                          $telegram->sendMessage($test_group_id, $message);
+                          $chat = TelegraphChat::find(1);
+                          $chat->message($message)->send();
                           unset($full_data);
                         } else { 
                               if(!checkdate($correct_date[1],$correct_date[0],$correct_date[2])) {                               
                                 $message = $bothelper->bagMessageDateFormat();
-                                $telegram->sendMessage($test_group_id, $message);
+                                $chat = TelegraphChat::find(1);
+                                $chat->message($message)->send();
                                 unset($full_data);
                               } else { 
 // результат, прошедший проверку
@@ -194,13 +201,15 @@ class WebhookController extends Controller
                                if($result == true) {
 
                                 $message = 'Данные пользователя '. $username_tg." обновлены.";
-                                $telegram->sendMessage($test_group_id, $message);
+                                $chat = TelegraphChat::find(1);
+                                $chat->message($message)->send();
                                 Log::debug($message);
                                 unset($full_data); 
                                }     
                                if($result == false) {                          
                                 $message = $bothelper->bagMessageUnknownUser($username_tg);
-                                $telegram->sendMessage($test_group_id, $message);
+                                $chat = TelegraphChat::find(1);
+                                $chat->message($message)->send();
                                 unset($full_data); 
                                }
                           
@@ -220,7 +229,8 @@ class WebhookController extends Controller
                   // проверка на количество элементов в массиве
                                 if(count($textArr) < 5 || count($textArr) > 5 || $textArr[1] == '' || $textArr[2] == ''|| $textArr[3] == ''|| $textArr[4] == '') {
                                   $message = $bothelper->bagMessageFormatAdmin();
-                                  $telegram->sendMessage($test_group_id, $message);
+                                  $chat = TelegraphChat::find(1);
+                                  $chat->message($message)->send();
                                   unset($full_data);
                                 } else {              
                                   $fullname =  $textArr[2];
@@ -231,12 +241,14 @@ class WebhookController extends Controller
                     // `проверка на соответствие элементов массива              
                                   if(!preg_match('/(\d+)/s', $date_of_birth) || !str_contains($date_of_birth,'.')) {
                                     $message = $bothelper->bagMessageFormatAdmin();
-                                    $telegram->sendMessage($test_group_id, $message);
+                                    $chat = TelegraphChat::find(1);
+                                    $chat->message($message)->send();
                                     unset($full_data);
                   // проверка на буквы в номере офиса
                                   } elseif(!is_numeric($office_number)) {
                                     $message = $bothelper->bagMessageOfficeNumberFormatAdmin();
-                                    $telegram->sendMessage($test_group_id, $message);
+                                    $chat = TelegraphChat::find(1);
+                                    $chat->message($message)->send();
                                     unset($full_data);
                                   } else {
                                 
@@ -244,12 +256,14 @@ class WebhookController extends Controller
                                           $correct_date = explode("-", str_replace(".", "-", $date_of_birth));
                                           if(!is_numeric($correct_date[0]) || !is_numeric($correct_date[1]) || !is_numeric($correct_date[2]) || $correct_date[2] < 1000 || strlen(trim($correct_date[0])) !== 2 || strlen(trim($correct_date[1])) !== 2) {                          
                                             $message = $bothelper->bagMessageDateFormatAdmin();
-                                            $telegram->sendMessage($test_group_id, $message);
+                                            $chat = TelegraphChat::find(1);
+                                            $chat->message($message)->send();
                                             unset($full_data);
                                           } else { 
                                                 if(!checkdate($correct_date[1],$correct_date[0],$correct_date[2])) {                               
                                                   $message = $bothelper->bagMessageDateFormatAdmin();
-                                                  $telegram->sendMessage($test_group_id, $message);
+                                                  $chat = TelegraphChat::find(1);
+                                                  $chat->message($message)->send();
                                                   unset($full_data);
                                                 } else { 
                   // результат, прошедший проверку
@@ -257,7 +271,8 @@ class WebhookController extends Controller
                                                     $result = $bothelper->adminResult($date_of_birth, $username_tg, $fullname, $office_number, $test_group_id, $full_data);
                                                   if($result == true) {
                                                      $message = $bothelper->messageAdminResult($username_tg);
-                                                     $telegram->sendMessage($test_group_id, $message);     
+                                                     $chat = TelegraphChat::find(1);
+                                                     $chat->message($message)->send();    
                                                      unset($full_data); 
                 }                                                                                                                                 
               }

@@ -8,6 +8,7 @@ use App\Models\Users;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Log;
+use DefStudio\Telegraph\Models\TelegraphChat;
 
 class DataController extends Controller
 {
@@ -50,7 +51,13 @@ class DataController extends Controller
       }
     }
 
-    
+    public function sendMessage() {
+
+
+      $chat = TelegraphChat::find(1);
+      $chat->message('hello')->send();
+
+    }
 
     // id | telegram_id | full_name | date_of_birth | office_number
 
