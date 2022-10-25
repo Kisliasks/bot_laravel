@@ -2,6 +2,7 @@
 
 namespace App\Helpers;
 
+use App\Models\Birthday;
 use App\Models\Users;
 use App\Models\Workstatus;
 use DateTime;
@@ -19,32 +20,21 @@ class Bothelper {
         .PHP_EOL.'/edit'.PHP_EOL.'@username'.PHP_EOL.'Фамилия Имя Отчество(если есть)'.PHP_EOL.'дд.мм.гггг'.PHP_EOL.'номер офиса'.
         PHP_EOL.PHP_EOL.
         'Команда <b>/all</b>:'.PHP_EOL.'выводит информацию об участниках группы. Если пользователь не имеет полной информации о себе, команда выведет его @username'.PHP_EOL.PHP_EOL.
-        'Команда <b>/admin</b>:'.PHP_EOL.'добавляет информацию об администраторе группы. Необходимо воспользоваться данной командой, если вы являетесь администратором. <i>Шаблон</i>:'.
-        PHP_EOL.'/edit'.PHP_EOL.'@username'.PHP_EOL.'Фамилия Имя Отчество(если есть)'.PHP_EOL.'дд.мм.гггг'.PHP_EOL.'номер офиса'.PHP_EOL.PHP_EOL.
+        'Команда <b>/admin</b>:'.PHP_EOL.'добавляет информацию об администраторе группы. Необходимо воспользоваться данной командой, если вы являетесь администратором и создателем группы. <i>Шаблон</i>:'.
+         PHP_EOL.'/edit'.PHP_EOL.'@username(ваш)'.PHP_EOL.'Фамилия Имя Отчество(если есть)'.PHP_EOL.'дд.мм.гггг'.PHP_EOL.'номер офиса'.PHP_EOL.PHP_EOL.
+        'Команда <b>/new_admin</b>:'.PHP_EOL.'дает права администратора любому участнику группы. <i>Шаблон</i>:'.
+         PHP_EOL.'/edit'.PHP_EOL.'@username'.PHP_EOL.PHP_EOL.
         '❗Для заполнения поля @username в команде /admin скопируйте его из настроек своего аккаунта вручную.'.PHP_EOL.PHP_EOL.
-        '<b> ‼️Важно!</b> Для полного выполнения функционала бота каждый участник группы должен начать с ним личную беседу @Lar_itsportsbot, нажав start.';
+        '<b> ‼️Важно!</b> Для полноценного выполнения функционала бота каждый участник группы должен начать с ним личную беседу @office_msc_bot, нажав start.';
         
         return $message;
     }
 
-    public function unsetButtonWorkDay() {
+   public function bugMessageNewAdmin() {
 
-        $buttons = [
-            'inline_keyboard' => [
-              [
-                [
-                  'text' => '',
-                  'callback_data' => 'Да'
-                ],
-                [
-                  'text' => '',
-                  'callback_data' => 'Нет'
-                ]
-              ]
-            ]
-          ];
-          return $buttons;
-    }
+    $message = 'Некорректный формат команды /new_admin. Используйте шаблон с переносом строки для каждого значения:'.PHP_EOL. '/edit'.PHP_EOL.'@username';
+    return $message;
+   }
 
     public function bagMessageFormat() {
 
@@ -101,7 +91,12 @@ class Bothelper {
         
         return $message;
     }
+    public function unknownUserForNewAdmin($username_tg) {
 
+      $message = 'Пользователь '.$username_tg.' не состоит в этой группе. Проверьте правильность написания @username в команде /new_admin. Для вывода всех участников воспользуйтесь командой /all';
+      
+      return $message;
+  }
     public function messageAdminResult($username_tg) {
 
         $message = 'Добавлены данные администратора '.$username_tg.PHP_EOL.'Проверьте правильность написания вашего @username, нажав на него: '.$username_tg.PHP_EOL.
@@ -121,6 +116,30 @@ class Bothelper {
 
 
 // обработчики команд ////////////////////////////////////////////////////////////////////////////
+
+
+public function newAdminStatus($username_tg) {
+
+  $db_user = Users::select('username')->where('username', $username_tg)->get();
+  foreach($db_user as $user) {
+    if(isset($user->username)) {
+        
+
+$user = Users::where('username', $user->username);
+$user->update([
+  'is_admin' => 1
+]);
+return true;
+    }
+  }
+
+if(!isset($user->username)) {                                    
+  return false;
+}
+
+
+}
+
 
 public function selectAllUsers() {
 
@@ -160,15 +179,12 @@ public function editResult($date_of_birth, $username_tg, $fullname, $office_numb
                   'date_of_birth' => $date->format('Y-m-d'),
                   'office_number' => $office_number
                 ]);
-
               
-                
                     return true;
             } 
           }
 
-          if(!isset($user->username)) {
-                                      
+          if(!isset($user->username)) {                                    
                 return false;
           }
     }
@@ -255,6 +271,39 @@ public function editResult($date_of_birth, $username_tg, $fullname, $office_numb
                $usr = implode("", $usernameArr);
                return $usr;
     
+    }
+
+    ///////  обработка ответа дня рождения 
+
+    public function badResponseBirthdayUsers($birthday_user_id) {
+      $users_bad_resp_birthday[] = '';
+      
+      $result = Birthday::select('another_user_id')->where([['status', 'Отказался'],['birth_user_id', $birthday_user_id]])->get();
+      foreach($result as $res) {
+      
+        $db_users = Users::where('telegram_id', $res->another_user_id)->get();
+      foreach($db_users as $users) {
+        $users_bad_resp_birthday[] = $users->username.' '. $users->fullname.PHP_EOL;
+      }
+     
+      }
+      return $users_bad_resp_birthday;
+  }
+
+    public function goodResponseBirthdayUsers($birthday_user_id) {
+
+      $users_good_resp_birthday[] = '';
+      $result = Birthday::select('another_user_id')->where([['status', 'Оплатил'],['birth_user_id', $birthday_user_id]])->get();
+      foreach($result as $res) {
+      
+        $db_users = Users::where('telegram_id', $res->another_user_id)->get();
+      foreach($db_users as $users) {
+        $users_good_resp_birthday[] = $users->username.' '. $users->fullname.PHP_EOL;
+      }
+      
+      }
+      return $users_good_resp_birthday;
+     
     }
 }
 

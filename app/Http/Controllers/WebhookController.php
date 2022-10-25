@@ -4,13 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Helpers\Bothelper;
 use App\Helpers\Telegram;
+use App\Models\Birthday;
+use App\Models\MessageId;
 use DefStudio\Telegraph\Models\TelegraphChat;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use App\Models\Users;
-
-
+use DefStudio\Telegraph\Keyboard\Button;
+use DefStudio\Telegraph\Keyboard\Keyboard;
 
 class WebhookController extends Controller
 {
@@ -21,7 +23,8 @@ class WebhookController extends Controller
 
     public function __invoke(Request $request, Telegram $telegram, Bothelper $bothelper) {
 
-      $test_group_id = '-1001813201867';
+      $group = TelegraphChat::find(1);
+      $test_group_id = $group->chat_id;
      
 
       $username = $request->input('message');
@@ -36,33 +39,140 @@ class WebhookController extends Controller
          $message_id = $full_data_buttons['message']['message_id'];
          $data = $full_data_buttons['data'];
          $username = '@'.$full_data_buttons['from']['username'];
+         $chat_id = $full_data_buttons['message']['chat']['id'];
+        $user_from_id = $full_data_buttons['from']['id'];
 
+         
       
                            
         switch($full_data_buttons) {
                         
               case $data == 'action:Да' :
                
-                  $message = 'Вы сделали свой выбор. Хорошего дня!';
-                  $buttons = $bothelper->unsetButtonWorkDay();
-                  $telegram->editButtons($test_group_id, $message, $buttons, $message_id);
-                  $bothelper->insertWorkStatus('Да', $username);
+                  $message = 'Отлично! Вы готовы работать.';
                 
+                  $db_chat_id = TelegraphChat::select('id')->where('chat_id' ,$chat_id)->get();
+                  
+                    foreach($db_chat_id as $db) {
+                    
+                      $chat = TelegraphChat::find($db->id);
+                      $chat->edit($message_id)->message($message)->send();
+                    }
+                  
+                  $message = MessageId::where('chat_id', $user_from_id);   // при массовой применить $chat_id. при таестовой $user_from_id  
+                    $message->delete();
+
+
+
+                  $bothelper->insertWorkStatus('Да', $username);
+                  
                 unset($full_data_buttons);
 
               break;
 
               case !empty($data_bad_resp) || $data == 'action:Нет' :
-                $message = 'Вы сделали свой выбор. Хорошего дня!';
-                $buttons = $bothelper->unsetButtonWorkDay();
-                $telegram->editButtons($test_group_id, $message, $buttons, $message_id);
-                $bothelper->insertWorkStatus('Нет', $username);
+                $message = 'Очень жаль, что вы не готовы начать рабочий день.';
+                $db_chat_id = TelegraphChat::select('id')->where('chat_id' ,$chat_id)->get();
+                    foreach($db_chat_id as $db) {
+                    
+                      $chat = TelegraphChat::find($db->id);
+                      $chat->edit($message_id)->message($message)->send();
+                    }
+                  $message = MessageId::where('chat_id', $chat_id);
+                    $message->delete();
+
+
+
+                  $bothelper->insertWorkStatus('Нет', $username);
 
                 unset($full_data_buttons);
                 break;
           }
         }
-/////////////////////////////////////////////////////
+//////////////////////////////Ответ по дню рождения //////////////
+
+if(!empty($callback_query)) {
+  $full_data_buttons = $callback_query;
+   $message_id = $full_data_buttons['message']['message_id'];
+   $data = $full_data_buttons['data'];
+   $username = '@'.$full_data_buttons['from']['username'];
+   $chat_id = $full_data_buttons['message']['chat']['id'];
+   $user_from_id = $full_data_buttons['from']['id'];
+                     
+  switch($full_data_buttons) {
+                  
+        case str_contains($data,'action:Да.др'):
+        $birth_user_id  = trim(strrchr($data, ":"), ':');
+         
+           
+            $users = Users::where('telegram_id', $birth_user_id)->get();
+          foreach($users as $usr) {
+            $message =  $message = 'Отлично! Вы перевели средства на подарок '.$usr->username.PHP_EOL .'На всякий случай, ссылка все еще внизу ⬇️';
+          }
+            $db_chat_id = TelegraphChat::select('id')->where('chat_id' ,$chat_id)->get();
+              foreach($db_chat_id as $db) {
+                $payment_url = 'https://www.tinkoff.ru/cf/2JL5Kn4vRFj';
+                $chat = TelegraphChat::find($db->id);
+                $chat->edit($message_id)->message($message)->keyboard(Keyboard::make()->buttons([
+                  Button::make('Ссылка на оплату')->url($payment_url)]))->send();
+              }
+              // удаляем сообщение из базы с учетом чата, из которого поступил ответ
+            $message = MessageId::where('chat_id', $chat_id);
+              $message->delete();
+                // запись статуса ответа в таблицу birthday
+
+              $result = Birthday::where([
+                ['birth_user_id', $birth_user_id],
+                ['another_user_id', $user_from_id],
+            ]);
+            if(!empty($result)) {
+            $result->update([
+              'status' => 'Оплатил'
+
+            ]);
+
+          }
+            
+          
+          unset($full_data_buttons);
+
+        break;
+
+        case str_contains($data,'action:Нет.др') :
+          $birth_user_id  = trim(strrchr($data, ":"), ':');
+          $users = Users::where('telegram_id', $birth_user_id)->get();
+          foreach($users as $usr) {
+            $message = 'Вы отказались делать перевод средств на подарок '.$usr->username;
+          }
+         
+          $db_chat_id = TelegraphChat::select('id')->where('chat_id' ,$chat_id)->get();
+              foreach($db_chat_id as $db) {
+              
+                $chat = TelegraphChat::find($db->id);
+                $chat->edit($message_id)->message($message)->send();
+              }
+            $message = MessageId::where('chat_id', $chat_id);
+              $message->delete();
+
+                // запись статуса ответа в таблицу birthday
+                $result = Birthday::where([
+                  ['birth_user_id', $birth_user_id],
+                  ['another_user_id', $user_from_id],
+              ]);
+              if(!empty($result)) {
+              $result->update([
+                'status' => 'Отказался'
+  
+              ]);
+  
+            }
+
+          
+
+          unset($full_data_buttons);
+          break;
+    }
+  }
 
        
 
@@ -120,6 +230,42 @@ class WebhookController extends Controller
         $type = $full_data['entities'][0]['type'];
        
         switch ($full_data) {
+          // работа с командой /new_admin
+
+          case ($type === 'bot_command' && str_contains($text,'/new_admin')) :
+            $textArr = explode(PHP_EOL, $text);
+            
+            if(count($textArr) < 2 || count($textArr) > 2 || $textArr[1] == '') {
+              $message = $bothelper->bugMessageNewAdmin();
+              $chat = TelegraphChat::find(1);
+              $chat->message($message)->send();
+              unset($full_data);
+            } else {
+
+              
+            // результат, прошедший проверку 
+            $username_tg = $textArr[1];
+            $result = $bothelper->newAdminStatus($username_tg);
+
+            if($result == true) {
+
+             $message = 'Пользователь '. $username_tg." получил права администратора.";
+             $chat = TelegraphChat::find(1);
+             $chat->message($message)->send();
+             Log::debug($message);
+             unset($full_data); 
+            }     
+            if($result == false) {                          
+             $message = $bothelper->unknownUserForNewAdmin($username_tg);
+             $chat = TelegraphChat::find(1);
+             $chat->message($message)->send();
+             unset($full_data); 
+            }
+       
+          }
+
+
+            break;
           // работа с командой /info
 
           case ($type === 'bot_command' && str_contains($text,'/info')) :

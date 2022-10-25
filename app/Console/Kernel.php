@@ -21,34 +21,41 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->call(
-       new BirthdayController
+        $schedule->call(function () {    // отправка сообщений о предстоящем др
+            $birth = new BirthdayController;
+            $birth->birthday();
 
-        )->timezone('Europe/Moscow')->dailyAt('10:00');
+            })->timezone('Europe/Moscow')->dailyAt('10:00');
+
+            $schedule->call(function () {    // таймаут сообщений о предстоящем др
+                $birth = new BirthdayController;
+                $birth->birthdayTimeOut();
+    
+                })->timezone('Europe/Moscow')->dailyAt('10:00');
 
         $schedule->call(function () {
             $work_day = new StartWorkDayController;
             $work_day->startWorkTimeOut();
                 // время ответа работника истекло
-        })->timezone('Europe/Moscow')->weekdays()->dailyAt('10:00');
+        })->timezone('Europe/Moscow')->weekdays()->dailyAt('12:14');
 
         $schedule->call(function () {
             $work_day = new StartWorkDayController;
             $work_day->unsetWorkStatus();
                 // обнуляем work status в конце дня
-        })->timezone('Europe/Moscow')->weekdays()->dailyAt('22:00');
+        })->timezone('Europe/Moscow')->weekdays()->dailyAt('15:05');
 
         $schedule->call(
               new StartWorkDayController
             // вывод статистики
      
-        )->timezone('Europe/Moscow')->weekdays()->dailyAt('10:00');
+        )->timezone('Europe/Moscow')->weekdays()->dailyAt('12:14');
 
         $schedule->call(function () {
             $work_day = new StartWorkDayController;
             $work_day->buttons();
      // предложение поработать
-        })->timezone('Europe/Moscow')->weekdays()->dailyAt('09:55');
+        })->timezone('Europe/Moscow')->weekdays()->dailyAt('12:12');
         
     }
 

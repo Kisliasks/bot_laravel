@@ -28,15 +28,20 @@ Route::post('/webhook', $appPath.'\WebhookController');
 
 Route::get('/data', $appPath.'\DataController@sendMessage');
 Route::get('/work', $appPath.'\StartWorkDayController@buttons');
-Route::get('/stat', $appPath.'\StartWorkDayController@statisticsWorkUsers');
+Route::get('/stat', $appPath.'\StartWorkDayController');
 Route::get('/timeout', $appPath.'\StartWorkDayController@startWorkTimeOut');
 Route::get('/unset', $appPath.'\StartWorkDayController@unsetWorkStatus');
 
 
+Route::get('/birth', $appPath.'\BirthdayController@birthday');
+Route::get('/birthtimeout', $appPath.'\BirthdayController@birthdayTimeOut');
+Route::get('/statbirth', $appPath.'\BirthdayController');
 
 
 
 
 
 
-//https://api.telegram.org/bot5680287506:AAHL0zd4_ZzpfO7Frn8gnHem4kdOQWgBzi8/setWebhook?url=https://8ea7-94-29-16-107.eu.ngrok.io/webhook
+
+
+//https://api.telegram.org/bot5680287506:AAHL0zd4_ZzpfO7Frn8gnHem4kdOQWgBzi8/setWebhook?url=https://dcf9-94-29-16-107.eu.ngrok.io/webhook

@@ -21,7 +21,11 @@ class StartWorkDayController extends Controller
    
 
    public function buttons() {
+    // дополнительное исключение в виде праздников 
 
+
+    $date = date('d.m');
+    // if($date >= '01')
 
     $message = 'Вы готовы приступить к работе?';
    
@@ -32,49 +36,51 @@ class StartWorkDayController extends Controller
       
       $db_chat_id = TelegraphChat::select('id')->where('chat_id' ,$telegram_id)->get();
       foreach($db_chat_id as $db) {
+        echo $db->id;
         
-        // $response = Telegraph::chat($db->id)->message($message)
-        // ->keyboard(Keyboard::make()->buttons([
-        //         Button::make('Да')->action('Да'),
-        //         Button::make('Нет')->action('Нет'),
+        $response = Telegraph::chat(TelegraphChat::find(1))->message($message)   // поменять find на $db->id   или на 1
+        ->keyboard(Keyboard::make()->buttons([
+                Button::make('Да')->action('Да'),
+                Button::make('Нет')->action('Нет'),
                 
-        // ]))->send();
+        ]))->send();
         
        
-        // $message_id = $response->telegraphMessageId();
+        $message_id = $response->telegraphMessageId();
         
-        // json_decode($message_id);
-        // $chat_id = TelegraphChat::find(1);
-        // echo $chat_id->chat_id;
-        // MessageId::insert([
-        //   'message_id' => $message_id,
-        //   'type' => 'start_work',
-        //   'chat_id' => $chat_id->chat_id
-        // ]);
-       
+        json_decode($message_id);
+       echo $message_id.PHP_EOL;
+        echo $db->id;
+        if(!empty($message_id)) {
+        MessageId::insert([
+          'message_id' => $message_id,
+          'type' => 'start_work',
+          'chat_id' => $telegram_id
+        ]);
+        }
       }
     }
     // тестовый 
     
     
-    $response = Telegraph::chat(TelegraphChat::find(1))->message($message)
-    ->keyboard(Keyboard::make()->buttons([
-            Button::make('Да')->action('Да'),
-            Button::make('Нет')->action('Нет'),
+    // $response = Telegraph::chat(TelegraphChat::find(1))->message($message)
+    // ->keyboard(Keyboard::make()->buttons([
+    //         Button::make('Да')->action('Да'),
+    //         Button::make('Нет')->action('Нет'),
             
-    ]))->send();
+    // ]))->send();
     
    
-    $message_id = $response->telegraphMessageId();
+    // $message_id = $response->telegraphMessageId();
     
-    json_decode($message_id);
-    $chat_id = TelegraphChat::find(1);
-    echo $chat_id->chat_id;
-    MessageId::insert([
-      'message_id' => $message_id,
-      'type' => 'start_work',
-      'chat_id' => $chat_id->chat_id
-    ]);
+    // json_decode($message_id);
+    // $chat_id = TelegraphChat::find(1);
+    // echo $chat_id->chat_id;
+    // MessageId::insert([
+    //   'message_id' => $message_id,
+    //   'type' => 'start_work',
+    //   'chat_id' => $chat_id->chat_id
+    // ]);
      
     
    }
@@ -86,13 +92,25 @@ class StartWorkDayController extends Controller
    $users_work = $bothelper->selectWorkUsers();
    date_default_timezone_set('Europe/Moscow');
     $date = Date("d.m.Y H:i");
+
+
+    $users = Users::select('telegram_id')->where('is_admin', 1)->get();
+    foreach($users as $user) {
+      $telegram_id = $user->telegram_id;
+    $db_chat_id = TelegraphChat::select('id')->where('chat_id', $telegram_id)->get();     // вывод всех админов в группе
+    foreach($db_chat_id as $db) {
+      echo $db->id;
+      
+    
+
+
     if(!empty($users_not_work) && !empty($users_work)) {
 
       $message = 'Статистика на сегодня '.'<i>'.$date.'</i>'.PHP_EOL.PHP_EOL.
       'К работе приступили:'.PHP_EOL.$users_work.PHP_EOL.
       'Не приступили к работе'.PHP_EOL.$users_not_work;
 
-      $chat = TelegraphChat::find(1);
+      $chat = TelegraphChat::find($db->id);
       $chat->message($message)->send();  
    
     }
@@ -100,25 +118,26 @@ class StartWorkDayController extends Controller
 
       $message = 'Статистика на сегодня '.'<i>'.$date.'</i>'.PHP_EOL.PHP_EOL.
       'К работе приступили:'.PHP_EOL.$users_work;
-      $chat = TelegraphChat::find(1);
+      $chat = TelegraphChat::find($db->id);
       $chat->message($message)->send();  
     }
     if(empty($users_work) && !empty($users_not_work)) {
 
       $message = 'Статистика на сегодня '.'<i>'.$date.'</i>'.PHP_EOL.PHP_EOL.
       'Не приступили к работе:'.PHP_EOL.$users_not_work;
-      $chat = TelegraphChat::find(1);
+      $chat = TelegraphChat::find($db->id);
       $chat->message($message)->send();  
     }
     if(empty($users_work) && empty($users_not_work)) {
 
       $message = 'Статистики нет.';
-      $chat = TelegraphChat::find(1);
+      $chat = TelegraphChat::find($db->id);
       $chat->message($message)->send();  
       
     }
-   
+    }
    }
+  }
 
    public function unsetWorkStatus() {
 
@@ -130,14 +149,14 @@ class StartWorkDayController extends Controller
 
    public function startWorkTimeOut() {
 
-   $message_id = MessageId::all();
+   $message_id = MessageId::where('type', 'start_work')->get();
     foreach($message_id as $val) {
    
      $db_chat_id = TelegraphChat::select('id')->where('chat_id' ,$val->chat_id)->get();
       foreach($db_chat_id as $db) {
        
-        $chat = TelegraphChat::find($db->id);
-        $chat->edit($val->message_id)->message("Вы сделали свой выбор. Хорошего дня!")->send();
+        $chat = TelegraphChat::find(1); // для теста использовать 1 . для массовой использовать $db->id
+        $chat->edit($val->message_id)->message("Очень жаль, что вы не готовы начать рабочий день.")->send();
       }
      $message = MessageId::where('type', 'start_work');
       $message->delete();
