@@ -52,7 +52,7 @@ class BirthdayController extends Controller
         $db_chat_id = TelegraphChat::select('id')->where('chat_id' ,$tg_id)->get();
         foreach($db_chat_id as $db) {
          
-        $payment_url = 'https://www.tinkoff.ru/cf/2JL5Kn4vRFj';
+        $payment_url = '';
           // отправляем кнопки
           $response = Telegraph::chat(TelegraphChat::find($db->id))->message($message)   // поменять find на $db->id   или на 1
           ->keyboard(Keyboard::make()->buttons([
