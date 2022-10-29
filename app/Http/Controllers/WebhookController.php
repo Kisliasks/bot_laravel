@@ -111,7 +111,7 @@ if(!empty($callback_query)) {
           }
             $db_chat_id = TelegraphChat::select('id')->where('chat_id' ,$chat_id)->get();
               foreach($db_chat_id as $db) {
-                $payment_url = 'https://www.tinkoff.ru/cf/2JL5Kn4vRFj';
+                $payment_url = '';
                 $chat = TelegraphChat::find($db->id);
                 $chat->edit($message_id)->message($message)->keyboard(Keyboard::make()->buttons([
                   Button::make('Ссылка на оплату')->url($payment_url)]))->send();
